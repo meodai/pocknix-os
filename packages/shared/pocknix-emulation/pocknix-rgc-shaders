@@ -16,6 +16,7 @@ import json, os, re, shutil, subprocess, sys
 
 HOME = os.path.expanduser("~")
 TREE = os.path.join(HOME, ".config/retroarch/shaders/shaders_slang")
+GLSL_TREE = os.path.join(HOME, ".config/retroarch/shaders/shaders_glsl")
 CFG = os.path.join(HOME, ".config/retroarch/config")
 RACFG = os.path.join(HOME, ".config/retroarch/retroarch.cfg")
 GAMBATTE_OPT = os.path.join(CFG, "Gambatte/Gambatte.opt")
@@ -44,6 +45,15 @@ RECIPES = {
                            {"GRID_INTENSITY": "0.9", "DARKEN_GRID": "0.15",
                             "BACKGROUND_INTENSITY": "0.8", "DARKEN_COLOUR": "0.25"}),
     "Gambatte/gbc.slangp": (["handheld/authentic_gbc.slangp"], {}),
+}
+# flycast and yabasanshiro are GLES-only builds: RetroArch puts them on the legacy gl driver,
+# which loads GLSL presets only, and CRT Royale's GLSL does not compile on GLES 3.2 (non-constant
+# global initialisers). RetroArch picks the preset extension its driver can load, so these sit
+# next to the slang ones: the video's other favourite, GDV mini, at the same saturation.
+GLSL_RECIPES = {
+    "DuckStation/DuckStation.glslp": (["crt/crt-gdv-mini.glslp"], {"sat": "0.95", "warpY": "0.0"}),
+    "Flycast/Flycast.glslp": (["crt/crt-gdv-mini.glslp"], {"sat": "0.95", "warpY": "0.0"}),
+    "YabaSanshiro/YabaSanshiro.glslp": (["crt/crt-gdv-mini.glslp"], {"sat": "0.95", "warpY": "0.0"}),
 }
 GAMBATTE = {
     "gambatte_gb_colorization": "internal",
@@ -75,11 +85,11 @@ def parse_preset(path):
     return kv
 
 
-def load_preset(rel):
-    """(passes, textures, params) of one .slangp, shader and texture paths made absolute."""
-    path = os.path.join(TREE, rel); base = os.path.dirname(path)
+def load_preset(rel, tree):
+    """(passes, textures, params) of one preset, shader and texture paths made absolute."""
+    path = os.path.join(tree, rel); base = os.path.dirname(path)
     if not os.path.isfile(path):
-        die(f"shader preset missing: {path} (is retroarch-shaders-pocknix installed?)")
+        die(f"shader preset missing: {path} (is the shader package installed?)")
     kv = parse_preset(path); d = dict(kv)
     passes = [dict() for _ in range(int(d["shaders"]))]
     texnames = [t for t in d.get("textures", "").split(";") if t]
@@ -98,11 +108,11 @@ def load_preset(rel):
     return passes, [(t, textures[t]) for t in texnames], params
 
 
-def render(out_path, chain, overrides):
+def render(out_path, chain, overrides, tree=TREE):
     out_dir = os.path.dirname(out_path)
     passes, textures, params = [], [], {}
     for rel in chain:
-        p, t, pr = load_preset(rel); passes += p; textures += t; params.update(pr)
+        p, t, pr = load_preset(rel, tree); passes += p; textures += t; params.update(pr)
     params.update(overrides)
     lines = [MARK, f"shaders = {len(passes)}"]
     for i, p in enumerate(passes):
@@ -179,6 +189,9 @@ def install():
     if load_state(): die("already installed; run uninstall first")
     if not os.path.isdir(TREE): die(f"shader tree missing: {TREE}")
     rendered = {f: render(os.path.join(CFG, f), chain, ov) for f, (chain, ov) in RECIPES.items()}
+    if os.path.isdir(GLSL_TREE):
+        rendered.update({f: render(os.path.join(CFG, f), chain, ov, GLSL_TREE)
+                         for f, (chain, ov) in GLSL_RECIPES.items()})
     written = []
     for rel, text in rendered.items():
         path = os.path.join(CFG, rel); os.makedirs(os.path.dirname(path), exist_ok=True)
