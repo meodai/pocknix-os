@@ -1,0 +1,28 @@
+#!/bin/bash
+# es-retroarch — every RetroArch launch, ES-DE command or pocknix-play tile, goes through here.
+#
+# It pins the frame-pacing contract on top of the user's retroarch.cfg via --appendconfig. RetroArch
+# saves its config on exit, so a single launch that fell back to the GL driver (or one menu change)
+# sticks for good, and under gamescope GL+vsync paces at an irregular ~47fps with the audio, which
+# is slaved to frame timing, wobbling after it. The login seeder cannot undo that drift: its merge
+# keeps any value that differs from the last baseline as a deliberate user edit. --appendconfig
+# wins every launch, and RetroArch writes the effective values back on exit, so the file self-heals.
+# A user who picked GL on purpose is overridden; under gamescope GL is exactly the broken case.
+#
+# The values mirror the pacing block in retroarch.cfg; the two per-panel ones use the same formula
+# as pocknix-roms-init, so the seed and this fragment never disagree.
+[ -r /usr/lib/pocknix/device.conf ] && . /usr/lib/pocknix/device.conf
+[ -r /etc/pocknix/device.conf ] && . /etc/pocknix/device.conf
+refresh="${POCKNIX_PANEL_REFRESH:-120}"
+si=$(( refresh / 60 )); [ "${si}" -lt 1 ] && si=1
+
+frag="${XDG_RUNTIME_DIR:-/tmp}/pocknix-retroarch-pacing.cfg"
+cat > "${frag}" <<CFG
+video_driver = "vulkan"
+video_vsync = "true"
+video_refresh_rate = "${refresh}.000000"
+video_swap_interval = "${si}"
+video_max_swapchain_images = "2"
+CFG
+
+exec retroarch -f --appendconfig "${frag}" "$@"
