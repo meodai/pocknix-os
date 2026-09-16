@@ -8,7 +8,8 @@
   core; cps1/cps2/cps3/arcade/mame all default to mame_libretro, which we do not ship.
   All commands go through the /usr/lib/pocknix/es-* wrappers: the big-core pin for the
   standalones, the frame-pacing pin (es-retroarch) for the libretro cores (psx and the
-  arcade systems). pocknix-play mirrors these defaults for the Steam tiles.
+  arcade systems). dreamcast and saturn are here only for that pin: the bundled entries
+  launch RetroArch bare. pocknix-play mirrors these defaults for the Steam tiles.
 -->
 <systemList>
     <system>
@@ -166,5 +167,25 @@
         <command label="Shortcut or script">%ENABLESHORTCUTS% %EMULATOR_OS-SHELL% %ROM%</command>
         <platform>arcade</platform>
         <theme>mame</theme>
+    </system>
+    <system>
+        <name>dreamcast</name>
+        <fullname>Sega Dreamcast</fullname>
+        <path>%ROMPATH%/dreamcast</path>
+        <extension>.cdi .CDI .chd .CHD .cue .CUE .dat .DAT .elf .ELF .gdi .GDI .iso .ISO .lst .LST .m3u .M3U .7z .7Z .zip .ZIP</extension>
+        <command label="Flycast">/usr/lib/pocknix/es-retroarch -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>
+        <command label="Shortcut or script">%ENABLESHORTCUTS% %EMULATOR_OS-SHELL% %ROM%</command>
+        <platform>dreamcast</platform>
+        <theme>dreamcast</theme>
+    </system>
+    <system>
+        <name>saturn</name>
+        <fullname>Sega Saturn</fullname>
+        <path>%ROMPATH%/saturn</path>
+        <extension>.bin .BIN .ccd .CCD .chd .CHD .cue .CUE .iso .ISO .m3u .M3U .mds .MDS .toc .TOC .7z .7Z .zip .ZIP</extension>
+        <command label="YabaSanshiro">/usr/lib/pocknix/es-retroarch -L %CORE_RETROARCH%/yabasanshiro_libretro.so %ROM%</command>
+        <command label="Shortcut or script">%ENABLESHORTCUTS% %EMULATOR_OS-SHELL% %ROM%</command>
+        <platform>saturn</platform>
+        <theme>saturn</theme>
     </system>
 </systemList>

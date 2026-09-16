@@ -16,10 +16,34 @@
 refresh="${POCKNIX_PANEL_REFRESH:-120}"
 si=$(( refresh / 60 )); [ "${si}" -lt 1 ] && si=1
 
+# Cores that cannot render through Vulkan get GL with vsync OFF: GL under gamescope paces at an
+# irregular ~47fps once vsynced (the jitter this file exists for), while audio-paced GL runs a clean
+# 60. Detected from the core's info file (required_hw_api without Vulkan: yabasanshiro,
+# mupen64plus_next, melonds); flycast is listed by name because our build carries no Vulkan
+# backend while its info file claims one, and it fails to load content when offered a Vulkan context.
+driver=vulkan; vsync=true
+core=""; prev=""
+for a in "$@"; do [ "${prev}" = "-L" ] && core="${a}"; prev="${a}"; done
+if [ -n "${core}" ]; then
+  name="$(basename "${core}" .so)"; info="/usr/share/libretro/info/${name}.info"
+  if grep -q '^required_hw_api' "${info}" 2>/dev/null && ! grep -q '^required_hw_api.*Vulkan' "${info}"; then
+    driver=gl; vsync=false
+  fi
+  case "${name}" in
+    flycast_libretro) driver=gl; vsync=false ;;
+    # DuckStation picks its own backend from a core option, and "OpenGL" drags the whole session
+    # onto GL (RetroArch switches driver to match the core's context). Only that value is healed:
+    # "Auto" follows the frontend's Vulkan and "Software" is a deliberate choice.
+    duckstation_libretro)
+      opt="${HOME}/.config/retroarch/config/DuckStation/DuckStation.opt"
+      [ -w "${opt}" ] && sed -i 's/^duckstation_GPU\.Renderer = "OpenGL"$/duckstation_GPU.Renderer = "Vulkan"/' "${opt}" ;;
+  esac
+fi
+
 frag="${XDG_RUNTIME_DIR:-/tmp}/pocknix-retroarch-pacing.cfg"
 cat > "${frag}" <<CFG
-video_driver = "vulkan"
-video_vsync = "true"
+video_driver = "${driver}"
+video_vsync = "${vsync}"
 video_refresh_rate = "${refresh}.000000"
 video_swap_interval = "${si}"
 video_max_swapchain_images = "2"
