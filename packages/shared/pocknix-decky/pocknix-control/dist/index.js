@@ -1070,7 +1070,7 @@ function Lighting({ config, setConfig, reload }) {
     const commitBoth = (hsv, brightness) => commit("both", hsv, brightness, setConfig, reload);
     return (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsxs(DFL.PanelSection, { title: "STICK LIGHTS", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: "Enable", checked: led.enabled, onChange: (value) => setLedEnabled(value)
                                 .then((next) => setConfig((cur) => (cur ? { ...cur, led: next } : cur)))
-                                .catch(() => reload()) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: "Boot Pulse", description: "Pulse the sticks white on boot while Steam loads, then switch to your colors.", checked: led.bootPulse, disabled: !led.enabled, onChange: (value) => setBootPulse(value)
+                                .catch(() => reload()) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: "Boot Pulse", description: "Pulse the sticks white while Steam loads, then apply your lighting settings.", checked: led.bootPulse, onChange: (value) => setBootPulse(value)
                                 .then((next) => setConfig((cur) => (cur ? { ...cur, led: next } : cur)))
                                 .catch(() => reload()) }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ToggleField, { label: "Link Left & Right", description: "Match both sticks to the same color.", checked: led.linked, disabled: !led.enabled, onChange: (value) => setLedLinked(value)
                                 .then((next) => setConfig((cur) => (cur ? { ...cur, led: next } : cur)))

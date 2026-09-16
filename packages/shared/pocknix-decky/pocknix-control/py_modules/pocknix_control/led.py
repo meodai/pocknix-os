@@ -252,13 +252,17 @@ def _ramp(caps, peak):
 
 def _handoff_to_user(data, left_rings, right_rings, left_sides, right_sides):
     # White pulses out, then each side ramps its own saved colour up from 0: left and right
-    # may differ, and side strips follow their stick behind the sides toggle.
+    # may differ, and side strips follow their stick behind the sides toggle. Lights the
+    # user keeps off stay off from here on.
     if _effect_stop.is_set():
         return
     rings = left_rings + right_rings
     sides = left_sides + right_sides
     _ramp(rings + sides, 100)
     if _effect_stop.is_set():
+        return
+    if not data["enabled"]:
+        _apply_caps_brightness(rings + sides, 0)
         return
     left = data["left"]
     right = data["right"] if not data["linked"] else left
@@ -397,12 +401,13 @@ def set_boot_pulse(enabled):
 
 
 def init_leds():
-    # Plugin._main entry. The pulse thread resolves its own nodes, so no lock is held while
-    # it runs.
+    # Plugin._main entry. The pulse is boot feedback, so it runs whether or not the lights
+    # are on; the saved state only takes over at the handoff. The pulse thread resolves its
+    # own nodes, so no lock is held while it runs.
     if not _available():
         return
     data = _load()
-    if data["enabled"] and data["bootPulse"] and _in_game_mode():
+    if data["bootPulse"] and _in_game_mode():
         start_boot_pulse()
     else:
         with _LOCK:

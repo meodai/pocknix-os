@@ -48,9 +48,8 @@ export function Lighting({ config, setConfig, reload }: {
         <PanelSectionRow>
           <ToggleField
             label="Boot Pulse"
-            description="Pulse the sticks white on boot while Steam loads, then switch to your colors."
+            description="Pulse the sticks white while Steam loads, then apply your lighting settings."
             checked={led.bootPulse}
-            disabled={!led.enabled}
             onChange={(value) =>
               setBootPulse(value)
                 .then((next) => setConfig((cur) => (cur ? { ...cur, led: next } : cur)))
