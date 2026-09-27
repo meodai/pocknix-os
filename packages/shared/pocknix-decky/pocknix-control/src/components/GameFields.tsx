@@ -1,4 +1,4 @@
-import { ButtonItem, ConfirmModal, PanelSectionRow, TextField, showModal } from "@decky/ui";
+import { ButtonItem, ConfirmModal, PanelSectionRow, TextField, ToggleField, showModal } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { availableCompatTools, registerForCompatTool, setCompatTool } from "../lib/compat";
 import type { CompatTool } from "../lib/compat";
@@ -60,6 +60,18 @@ export function EnvVarsButton({ value, onSave }: { value: string; onSave: (next:
         Environment Variables
       </ButtonItem>
     </PanelSectionRow>
+  );
+}
+
+/** Applies live: the backend re-syncs the running game's touchscreen on every save. */
+export function TouchField({ values, patch }: { values: Record<string, any>; patch: (patch: Record<string, any>) => void }) {
+  return (
+    <ToggleField
+      label="Disable Touchscreen"
+      description="While the game is running, to stop stray touches"
+      checked={values.touchDisabled === true}
+      onChange={(on) => patch({ touchDisabled: on })}
+    />
   );
 }
 
@@ -147,6 +159,7 @@ export function TweakFields({ config, appid, values, patch }: {
       />
       <SelectEdit label="Audio Buffer" value={audioValue} options={audioLatencyOptions} onChange={(id) => patch({ audioLatency: id })} />
       <SelectEdit label="Mesa Version" value={mesaValue} options={mesaOptions} onChange={(id) => patch({ mesaVersion: id })} />
+      <TouchField values={values} patch={patch} />
       <EnvVarsButton value={String(values.envVars ?? "")} onSave={(next) => patch({ envVars: next })} />
     </>
   );

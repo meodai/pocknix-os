@@ -27,6 +27,7 @@ const definePlugin = (fn) => {
 const getConfig = () => call("get_config");
 const setFanMode = (mode) => call("set_fan_mode", mode);
 const setLavdMode = (mode) => call("set_lavd_mode", mode);
+const gameLifetime = (appid, running) => call("game_lifetime", appid, running);
 const saveTweaks = (data) => call("save_tweaks", data);
 const exportConfig = (appid, name, basename, allowOverwrite) => call("export_config", appid, name, basename, allowOverwrite);
 const configDir = () => call("config_dir");
@@ -550,6 +551,10 @@ function EnvVarsModal({ initial, onSave, closeModal }) {
 function EnvVarsButton({ value, onSave }) {
     return (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", description: value ? value : "None set", onClick: () => DFL.showModal(SP_JSX.jsx(EnvVarsModal, { initial: value, onSave: onSave })), children: "Environment Variables" }) }));
 }
+/** Applies live: the backend re-syncs the running game's touchscreen on every save. */
+function TouchField({ values, patch }) {
+    return (SP_JSX.jsx(DFL.ToggleField, { label: "Disable Touchscreen", description: "While the game is running, to stop stray touches", checked: values.touchDisabled === true, onChange: (on) => patch({ touchDisabled: on }) }));
+}
 /** Per-game fan/scheduler overrides ("" = follow the global mode). */
 function PerfFields({ values, patch }) {
     const perGameFan = [globalChoice, ...fanOptions];
@@ -604,7 +609,7 @@ function TweakFields({ config, appid, values, patch }) {
                 } }), SP_JSX.jsx(SelectEdit, { label: "FEX Preset", value: fexValue, options: fexOptions, onChange: (id) => {
                     patch({ fexProfile: id });
                     syncFexLaunchOption(appid, fexSteamString(String(id), presets));
-                } }), SP_JSX.jsx(SelectEdit, { label: "Audio Buffer", value: audioValue, options: audioLatencyOptions, onChange: (id) => patch({ audioLatency: id }) }), SP_JSX.jsx(SelectEdit, { label: "Mesa Version", value: mesaValue, options: mesaOptions, onChange: (id) => patch({ mesaVersion: id }) }), SP_JSX.jsx(EnvVarsButton, { value: String(values.envVars ?? ""), onSave: (next) => patch({ envVars: next }) })] }));
+                } }), SP_JSX.jsx(SelectEdit, { label: "Audio Buffer", value: audioValue, options: audioLatencyOptions, onChange: (id) => patch({ audioLatency: id }) }), SP_JSX.jsx(SelectEdit, { label: "Mesa Version", value: mesaValue, options: mesaOptions, onChange: (id) => patch({ mesaVersion: id }) }), SP_JSX.jsx(TouchField, { values: values, patch: patch }), SP_JSX.jsx(EnvVarsButton, { value: String(values.envVars ?? ""), onSave: (next) => patch({ envVars: next }) })] }));
 }
 
 function clone(obj) {
@@ -691,7 +696,7 @@ function Games({ config, setConfig, reload }) {
                                             syncFexLaunchOption(appid, fexSteamString(String(id), presets));
                                         }
                                     }
-                                } }), SP_JSX.jsx(SelectEdit, { label: "Audio Buffer", value: audioValue, options: audioLatencyOptions, onChange: (id) => patchSettings({ audioLatency: id }) }), SP_JSX.jsx(EnvVarsButton, { value: String(values.envVars ?? ""), onSave: (next) => patchSettings({ envVars: next }) })] })) : (SP_JSX.jsx(TweakFields, { config: config, appid: game.appid, values: values, patch: patchSettings }))] })) : null, !editingDefault && perGameEnabled ? (SP_JSX.jsx(ConfigSection, { game: { appid: game.appid, name: game.name || "" }, reload: reload })) : null] }));
+                                } }), SP_JSX.jsx(SelectEdit, { label: "Audio Buffer", value: audioValue, options: audioLatencyOptions, onChange: (id) => patchSettings({ audioLatency: id }) }), SP_JSX.jsx(TouchField, { values: values, patch: patchSettings }), SP_JSX.jsx(EnvVarsButton, { value: String(values.envVars ?? ""), onSave: (next) => patchSettings({ envVars: next }) })] })) : (SP_JSX.jsx(TweakFields, { config: config, appid: game.appid, values: values, patch: patchSettings }))] })) : null, !editingDefault && perGameEnabled ? (SP_JSX.jsx(ConfigSection, { game: { appid: game.appid, name: game.name || "" }, reload: reload })) : null] }));
 }
 
 // Replaces the stock "Add a Non-Steam Game" flow: Steam's file browser cannot open a new
@@ -1351,8 +1356,29 @@ function patchLibraryContextMenu() {
     }
 }
 
+// Reports game start/stop to the backend, which owns the touchscreen tweak (touch.py). Covers
+// every Steam launch, Proton or not, since the appid comes from Steam itself. Shortcut appids
+// are unsigned above 2^31, hence the >>> 0 (see nonSteamShortcuts).
+function registerTouchLifetime() {
+    const report = (appid, running) => gameLifetime(appid, running).catch(() => { });
+    // A plugin reload mid-game misses the start notification.
+    const running = currentGame();
+    if (running)
+        report(running.appid, true);
+    try {
+        const handle = window.SteamClient?.GameSessions?.RegisterForAppLifetimeNotifications?.((update) => {
+            report(String(Number(update?.unAppID) >>> 0), !!update?.bRunning);
+        });
+        return () => handle?.unregister?.();
+    }
+    catch (error) {
+        return () => { };
+    }
+}
+
 var index = definePlugin(() => {
     const unpatchContextMenu = patchLibraryContextMenu();
+    const unregisterTouch = registerTouchLifetime();
     return {
         name: "Pocknix Control",
         content: SP_JSX.jsx(Content, {}),
@@ -1360,6 +1386,7 @@ var index = definePlugin(() => {
         alwaysRender: true,
         onDismount() {
             unpatchContextMenu();
+            unregisterTouch();
         },
     };
 });

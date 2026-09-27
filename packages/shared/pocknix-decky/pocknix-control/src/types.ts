@@ -14,6 +14,8 @@ export interface GameTweak {
   lavdMode?: string;
   /** "big" pins the game to the device's big cores (POCKNIX_BIG_CORES); "" = all cores. */
   cpuPin?: string;
+  /** true = the touchscreen is inhibited while this game runs (pocknix_control/touch.py). */
+  touchDisabled?: boolean;
   [key: string]: any;
 }
 
