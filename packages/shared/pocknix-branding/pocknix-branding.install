@@ -7,9 +7,8 @@ _pocknix_set_plymouth_theme() {
   sed -i 's/^Theme=spinner$/Theme=pocknix/' "${conf}"
 }
 
-# 0.1.0-1's seed stamped before the shell had a desktop to write to (see pocknix-branding-init),
-# so every stamp it left is false. Drop it where no wallpaper was ever set, so the fixed seed
-# gets its first real run. A user who picked a wallpaper since has an Image= line and keeps it.
+# 0.1.0-1 stamped before any desktop existed, so its stamps are false. Drop them where no
+# wallpaper was ever set; a user's own pick has an Image= line and keeps its stamp.
 _pocknix_drop_false_stamps() {
   local home stamp rc
   for home in ${POCKNIX_HOME_ROOT:-/home}/*; do
