@@ -12,8 +12,8 @@ export interface GameTweak {
   fanMode?: string;
   /** Per-game scx_lavd mode override, applied for the game session only; "" = use global. */
   lavdMode?: string;
-  /** "big" pins the game to the device's big cores (POCKNIX_BIG_CORES); "" = all cores. */
-  cpuPin?: string;
+  /** Wrapper exports PROTON_USE_XALIA=0 unless false; absent = disabled. */
+  disableXalia?: boolean;
   /** true = the touchscreen is inhibited while this game runs (pocknix_control/touch.py). */
   touchDisabled?: boolean;
   [key: string]: any;
@@ -145,3 +145,29 @@ export type ShareStatus = {
   on: boolean;
   active: boolean;
 };
+
+export interface CalibrationLive {
+  lx: number;
+  ly: number;
+  rx: number;
+  ry: number;
+  lt: number;
+  rt: number;
+}
+
+export interface CalibrationStatus {
+  available: boolean;
+  backend: string;
+  saved: boolean;
+  phase: "idle" | "capture" | "review";
+  step: number;
+  steps: number;
+  progress: number;
+  error: string;
+  result: Record<string, number>;
+  control?: string;
+  kind?: "stick" | "trigger";
+  direction?: string;
+  stage?: "push" | "release";
+  live?: CalibrationLive;
+}
